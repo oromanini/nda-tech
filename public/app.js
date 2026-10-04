@@ -340,7 +340,7 @@ document.getElementById('btnSubmit').addEventListener('click', async () => {
     const res = await fetch('/api/gerar-nda', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.dados),
+      body: JSON.stringify(conviteToken ? { ...state.dados, convite_token: conviteToken } : state.dados),
     });
     const data = await res.json();
 
@@ -379,6 +379,32 @@ document.getElementById('editRepresentante').addEventListener('click', () => goT
 document.getElementById('editTestemunhas').addEventListener('click', () => goTo(4));
 document.getElementById('editEmail').addEventListener('click', () => goTo(5));
 
+// ── Convite do Deal (/c/<token>) ───────────────────────────────────────────
+// O e-mail vem do convite e fica travado; o servidor também ignora qualquer outro valor enviado no POST.
+const conviteToken = (location.pathname.match(/^\/c\/([A-Za-z0-9_-]{32,128})$/) || [])[1] || null;
+
+async function carregarConvite() {
+  if (!conviteToken) return;
+  try {
+    const res = await fetch(`/api/convites/${conviteToken}`);
+    if (!res.ok) throw new Error('convite indisponível');
+    const c = await res.json();
+    const set = (id, v) => { const el = document.getElementById(id); if (el && !el.value) el.value = v; };
+    set('razao_social', c.empresa);
+    set('representante', c.responsavel);
+    set('nome_pf', c.responsavel);
+    for (const id of ['email', 'email_confirm']) {
+      const el = document.getElementById(id);
+      el.value = c.email;
+      el.readOnly = true;
+      el.title = 'E-mail definido pelo convite';
+    }
+  } catch {
+    location.replace(location.pathname); // o servidor responde com a página neutra
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
+carregarConvite();
 updateProgress();
 lucide.createIcons();
