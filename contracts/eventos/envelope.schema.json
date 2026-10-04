@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.alluz.tech/v1/eventos/envelope.schema.json",
+  "title": "Envelope de evento (qualquer sistema → Deal)",
+  "description": "POST {DEAL_URL}/api/integracoes/eventos. Headers de autenticação/assinatura: ver README §4.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "versao": {
+      "const": 1
+    },
+    "evento_id": {
+      "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/uuid"
+    },
+    "tipo": {
+      "enum": [
+        "aurora.diagnostico.enviado",
+        "nda.assinatura.parcial",
+        "nda.assinado",
+        "contrato.assinatura.parcial",
+        "contrato.assinado",
+        "board.fase.alterada"
+      ]
+    },
+    "projeto_uuid": {
+      "oneOf": [
+        {
+          "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cliente_uuid": {
+      "oneOf": [
+        {
+          "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ocorrido_em": {
+      "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/data_hora"
+    },
+    "origem": {
+      "enum": [
+        "aurora",
+        "nda-form",
+        "contractor",
+        "alluz-board"
+      ]
+    },
+    "dados": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "versao",
+    "evento_id",
+    "tipo",
+    "projeto_uuid",
+    "ocorrido_em",
+    "origem",
+    "dados"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "aurora.diagnostico.enviado"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origem": {
+            "const": "aurora"
+          },
+          "projeto_uuid": {
+            "type": "null"
+          },
+          "dados": {
+            "$ref": "aurora.diagnostico.enviado.schema.json"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "projeto_uuid": {
+            "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/uuid"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "nda.assinatura.parcial"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origem": {
+            "const": "nda-form"
+          },
+          "dados": {
+            "$ref": "nda.assinatura.parcial.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "nda.assinado"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origem": {
+            "const": "nda-form"
+          },
+          "dados": {
+            "$ref": "nda.assinado.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "contrato.assinatura.parcial"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origem": {
+            "const": "contractor"
+          },
+          "dados": {
+            "$ref": "contrato.assinatura.parcial.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "contrato.assinado"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origem": {
+            "const": "contractor"
+          },
+          "dados": {
+            "$ref": "contrato.assinado.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "board.fase.alterada"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origem": {
+            "const": "alluz-board"
+          },
+          "dados": {
+            "$ref": "board.fase.alterada.schema.json"
+          }
+        }
+      }
+    }
+  ]
+}

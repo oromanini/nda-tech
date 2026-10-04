@@ -1,0 +1,40 @@
+{
+  "versao": 1,
+  "evento_id": "0b6f1c1e-1d2a-4c55-9a0e-333333333333",
+  "tipo": "nda.assinado",
+  "projeto_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "cliente_uuid": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "ocorrido_em": "2026-10-03T16:30:00-03:00",
+  "origem": "nda-form",
+  "dados": {
+    "nda_id": "nda_123",
+    "assinado_em": "2026-10-04T15:40:00-03:00",
+    "vigente_ate": "2027-10-04",
+    "documento_id": "docuseal_987",
+    "dados_juridicos": {
+      "tipo_pessoa": "PJ",
+      "razao_social": "BPO Exemplo LTDA",
+      "documento": "12.345.678/0001-90",
+      "endereco": "Av. Brasil, 100, Maringá/PR",
+      "cep": "87000-000",
+      "email": "maria@bpoexemplo.com.br",
+      "representante": {
+        "nome": "Maria Souza",
+        "cpf": "111.222.333-44",
+        "cargo": "Sócia"
+      },
+      "testemunhas": [
+        {
+          "nome": "João Lima",
+          "cpf": "222.333.444-55",
+          "email": "joao@bpoexemplo.com.br"
+        },
+        {
+          "nome": "Ana Reis",
+          "cpf": "333.444.555-66",
+          "email": "ana@alluz.tech"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "versao": 1,
+  "evento_id": "0b6f1c1e-1d2a-4c55-9a0e-222222222222",
+  "tipo": "nda.assinatura.parcial",
+  "projeto_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "cliente_uuid": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "ocorrido_em": "2026-10-03T16:30:00-03:00",
+  "origem": "nda-form",
+  "dados": {
+    "nda_id": "nda_123",
+    "papel": "cliente",
+    "nome": "Maria Souza",
+    "assinado_em": "2026-10-04T09:12:00-03:00",
+    "assinaturas_concluidas": 1,
+    "assinaturas_total": 4
+  }
+}

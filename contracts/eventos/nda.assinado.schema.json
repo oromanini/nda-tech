@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.alluz.tech/v1/eventos/nda.assinado.schema.json",
+  "title": "dados de nda.assinado",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "nda_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "assinado_em": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "vigente_ate": {
+      "type": "string",
+      "format": "date"
+    },
+    "documento_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "dados_juridicos": {
+      "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/dados_juridicos"
+    }
+  },
+  "required": [
+    "nda_id",
+    "assinado_em",
+    "vigente_ate",
+    "documento_id",
+    "dados_juridicos"
+  ]
+}

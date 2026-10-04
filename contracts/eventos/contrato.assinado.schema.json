@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.alluz.tech/v1/eventos/contrato.assinado.schema.json",
+  "title": "dados de contrato.assinado",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contrato_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "assinado_em": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "documento_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  },
+  "required": [
+    "contrato_id",
+    "assinado_em",
+    "documento_id"
+  ]
+}
