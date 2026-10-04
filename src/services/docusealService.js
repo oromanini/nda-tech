@@ -39,7 +39,23 @@ function apiRequest(method, path, body) {
   });
 }
 
-// Busca os campos (fields) do template base para reutilizar as posições de assinatura
+// Campos de assinatura na página própria de assinaturas (a última do PDF).
+// Coordenadas normalizadas (0–1) medidas no PDF real: A4, margens de 2,5 cm, blocos de altura fixa em templates/nda.html
+// (linha "Assinatura:" ancorada no rodapé do bloco, então não muda com nomes longos). Se o layout da página de
+// assinaturas mudar, regerar o PDF e reconferir estes valores (tests/docusealService.test.js ancora o formato).
+const COLUNA_ESQ = { x: 0.193, w: 0.266 };
+const COLUNA_DIR = { x: 0.602, w: 0.266 };
+const LINHA_1 = { y: 0.286, h: 0.036 }; // cliente (PJ: representante) e Alluz
+const LINHA_2 = { y: 0.494, h: 0.036 }; // testemunhas
+const SIGNATURE_FIELDS = [
+  { name: 'ASSINATURA DIVULGANTE', role: 'DIVULGANTE',   ...COLUNA_ESQ, ...LINHA_1 },
+  { name: 'ASSINATURA RECEPTORA',  role: 'RECEPTORA',    ...COLUNA_DIR, ...LINHA_1 },
+  { name: 'ASSINATURA T1',         role: 'TESTEMUNHA 1', ...COLUNA_ESQ, ...LINHA_2 },
+  { name: 'ASSINATURA T2',         role: 'TESTEMUNHA 2', ...COLUNA_DIR, ...LINHA_2 },
+];
+
+// Busca os campos do template base. Só os que NÃO são assinatura são reaproveitados (ex.: rubricas);
+// as assinaturas vêm de SIGNATURE_FIELDS, calibradas para o layout atual.
 async function buscarCamposTemplate() {
   const template = await apiRequest('GET', `/templates/${DOCUSEAL_TEMPLATE_ID}`, {});
   return template.fields || [];
@@ -62,7 +78,8 @@ function inferirRole(nomeField) {
 }
 
 async function criarSubmission(dados, pdfBuffer) {
-  const nomeCliente = dados.razao_social || dados.representante || 'Cliente';
+  // PJ assina pelo representante legal; PF assina em nome próprio (razao_social guarda o nome).
+  const nomeCliente = (dados.tipo_pessoa === 'PJ' && dados.representante) || dados.razao_social || 'Cliente';
 
   const submitters = [
     { role: 'DIVULGANTE',   name: nomeCliente,            email: dados.email },
@@ -77,21 +94,28 @@ async function criarSubmission(dados, pdfBuffer) {
     //   - x/y/w/h: frações normalizadas (0–1)
     //   - page: 1-indexed (começa em 1)
     //   - resposta: objeto único { id, submitters: [{email, slug, embed_src, ...}] }
-    const campos = await buscarCamposTemplate();
-    const ultimaPaginaOriginal = Math.max(...campos.flatMap(f => f.areas?.map(a => a.page) ?? [0]));
-    const novaUltimaPagina = ultimaPaginaPDF(pdfBuffer);
-
-    const fields = campos.map(f => ({
+    // Mesmas quatro assinaturas para PF e PJ (o signatário DIVULGANTE é o representante na PJ e a própria pessoa na PF).
+    const novaUltimaPagina = ultimaPaginaPDF(pdfBuffer); // 0-indexed
+    const campos = await buscarCamposTemplate().catch((err) => {
+      console.error('docuseal: não foi possível ler o template base; só as assinaturas serão enviadas:', err.message);
+      return [];
+    });
+    const ultimaPaginaOriginal = Math.max(-1, ...campos.flatMap((f) => (f.areas || []).map((a) => a.page)));
+    const outros = campos.filter((f) => f.type !== 'signature').map((f) => ({
       name: f.name,
       type: f.type,
       role: inferirRole(f.name),
       required: f.required !== false,
       areas: (f.areas || []).map(({ attachment_uuid, ...a }) => ({
         ...a,
-        // Template retorna 0-indexed; submissions/pdf exige 1-indexed
+        // Template retorna 0-indexed; submissions/pdf exige 1-indexed. A última página do template vira a do novo PDF.
         page: (a.page === ultimaPaginaOriginal ? novaUltimaPagina : a.page) + 1,
       })),
     }));
+    const assinaturas = SIGNATURE_FIELDS.map(({ name, role, x, y, w, h }) => ({
+      name, type: 'signature', role, required: true, areas: [{ x, y, w, h, page: novaUltimaPagina + 1 }],
+    }));
+    const fields = [...outros, ...assinaturas];
 
     const submission = await apiRequest('POST', '/submissions/pdf', {
       send_email: false,
@@ -136,4 +160,10 @@ async function criarSubmission(dados, pdfBuffer) {
   };
 }
 
-module.exports = { criarSubmission };
+// Reenvio de convite com assinatura em andamento: arquiva a submissão antiga para ninguém assinar o NDA invalidado.
+async function arquivarSubmission(submissionId) {
+  if (!process.env.DOCUSEAL_API_KEY || !submissionId) return;
+  await apiRequest('DELETE', `/submissions/${encodeURIComponent(submissionId)}`, {});
+}
+
+module.exports = { criarSubmission, arquivarSubmission, ultimaPaginaPDF, SIGNATURE_FIELDS };
