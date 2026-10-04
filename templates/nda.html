@@ -75,6 +75,7 @@
       margin-bottom: 8px;
     }
     .assinaturas {
+      page-break-before: always;
       margin-top: 60px;
       page-break-inside: avoid;
     }
@@ -88,12 +89,22 @@
       gap: 40px;
       margin-bottom: 30px;
     }
+    /* Altura fixa e linha de assinatura ancorada no rodapé do bloco: a posição do campo no DocuSeal
+       não depende de o nome quebrar em duas linhas (ver SIGNATURE_FIELDS em docusealService.js). */
     .assinatura-bloco {
       border-top: 1px solid #333;
       padding-top: 8px;
+      position: relative;
+      height: 4cm;
+    }
+    .assinatura-bloco .linha-assinatura {
+      position: absolute;
+      left: 0;
+      bottom: 0;
     }
     .assinatura-bloco p {
       font-size: 10pt;
+      line-height: 1.35;
       margin-bottom: 2px;
     }
     .assinatura-bloco .label {
@@ -143,15 +154,19 @@
   <div class="clausula">
     <h3>Cláusula 1 – Do Objeto e Finalidade</h3>
     <p class="item">1.1. O presente NDA tem por objeto estabelecer as condições de sigilo e proteção das Informações Confidenciais
-    divulgadas pela PARTE DIVULGANTE à PARTE RECEPTORA no âmbito da etapa de Receita ("R") da metodologia DRI, que compreende:</p>
+    divulgadas pela PARTE DIVULGANTE à PARTE RECEPTORA no âmbito das etapas de Diagnóstico ("D") e "R" da metodologia DRI,
+    esta última em qualquer de suas modalidades — Réplica de Comportamento, aplicável à automação de processos já executados
+    pela PARTE DIVULGANTE, ou Levantamento de Requisitos, aplicável ao desenvolvimento de soluções novas —, compreendendo:</p>
     <ul>
       <li>a) Imersão nas operações, processos e fluxos de trabalho da PARTE DIVULGANTE;</li>
-      <li>b) Levantamento, análise e documentação das regras de negócio;</li>
-      <li>c) Identificação de gargalos operacionais, sistemas existentes e integrações necessárias;</li>
-      <li>d) Elaboração de Documento de Escopo Técnico (DET) e proposta técnica pela PARTE RECEPTORA.</li>
+      <li>b) Gravações de tela, vídeos, áudios e demais materiais enviados pela PARTE DIVULGANTE, inclusive por meio da plataforma da PARTE RECEPTORA;</li>
+      <li>c) Ideias, conceitos, modelos de negócio, planos de produto, regras comerciais e estratégias de crescimento apresentados pela PARTE DIVULGANTE;</li>
+      <li>d) Levantamento, análise e documentação das regras de negócio e dos requisitos da solução;</li>
+      <li>e) Identificação de gargalos operacionais, sistemas existentes e integrações necessárias;</li>
+      <li>f) Elaboração de proposta técnico-comercial, cronograma e Documento de Escopo Técnico (DET) pela PARTE RECEPTORA.</li>
     </ul>
-    <p class="item">1.2. A finalidade do acesso às Informações Confidenciais é exclusivamente a elaboração da proposta técnica e,
-    caso contratado, o desenvolvimento da solução tecnológica acordada entre as partes.</p>
+    <p class="item">1.2. A finalidade do acesso às Informações Confidenciais é exclusivamente a avaliação do projeto, a elaboração de
+    proposta técnico-comercial e cronograma e, caso contratado, o desenvolvimento da solução tecnológica acordada entre as partes.</p>
   </div>
 
   <div class="clausula">
@@ -280,15 +295,13 @@
         <p><strong>{{RAZAO_SOCIAL}}</strong></p>
         <p class="label">{{TIPO_DOCUMENTO}}: {{NUMERO_DOCUMENTO}}</p>
         <p class="label">PARTE DIVULGANTE</p>
-        <br><br>
-        <p class="label">Assinatura: _______________________________</p>
+        <p class="label linha-assinatura">Assinatura: _______________________________</p>
       </div>
       <div class="assinatura-bloco">
         <p><strong>ALLUZ ENERGIA SUSTENTÁVEL E TECNOLOGIA DA INFORMAÇÃO LTDA</strong></p>
         <p class="label">CNPJ: 34.782.317/0001-49</p>
         <p class="label">PARTE RECEPTORA</p>
-        <br><br>
-        <p class="label">Assinatura: _______________________________</p>
+        <p class="label linha-assinatura">Assinatura: _______________________________</p>
       </div>
     </div>
 
@@ -298,14 +311,12 @@
         <div class="assinatura-bloco">
           <p><strong>{{TESTEMUNHA1_NOME}}</strong></p>
           <p class="label">CPF: {{TESTEMUNHA1_CPF}}</p>
-          <br>
-          <p class="label">Assinatura: _______________________________</p>
+          <p class="label linha-assinatura">Assinatura: _______________________________</p>
         </div>
         <div class="assinatura-bloco">
           <p><strong>{{TESTEMUNHA2_NOME}}</strong></p>
           <p class="label">CPF: {{TESTEMUNHA2_CPF}}</p>
-          <br>
-          <p class="label">Assinatura: _______________________________</p>
+          <p class="label linha-assinatura">Assinatura: _______________________________</p>
         </div>
       </div>
     </div>
