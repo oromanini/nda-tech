@@ -43,6 +43,17 @@ services:
       PORT: 3000
       NODE_ENV: ${NODE_ENV:-production}
       DOCUSEAL_API_KEY: ${DOCUSEAL_API_KEY}
+      DOCUSEAL_WEBHOOK_SECRET: ${DOCUSEAL_WEBHOOK_SECRET:-dev-webhook-trocar}
+      NDA_PUBLIC_URL: ${NDA_PUBLIC_URL:-http://localhost:3000}
+      LEGACY_NDA_FORM_ENABLED: ${LEGACY_NDA_FORM_ENABLED:-true}
+      # Só desenvolvimento (mesmos defaults do docker-compose do Deal). Em produção: openssl rand -hex 32.
+      INTEGRACAO_DEAL_TOKEN: ${INTEGRACAO_DEAL_TOKEN:-dev-deal-nda-token-trocar}
+      INTEGRACAO_DEAL_HMAC: ${INTEGRACAO_DEAL_HMAC:-dev-deal-nda-hmac-trocar}
+      INTEGRACAO_DEAL_HMAC_ANTERIOR: ${INTEGRACAO_DEAL_HMAC_ANTERIOR:-}
+      DEAL_URL: ${DEAL_URL:-http://host.docker.internal:4000}
+      INTEGRACAO_NDA_FORM_TOKEN: ${INTEGRACAO_NDA_FORM_TOKEN:-dev-nda-form-token-trocar}
+      INTEGRACAO_NDA_FORM_HMAC: ${INTEGRACAO_NDA_FORM_HMAC:-dev-nda-form-hmac-trocar}
+      JOBS_TOKEN: ${JOBS_TOKEN:-dev-jobs-token-trocar}
     depends_on:
       db:
         condition: service_healthy
