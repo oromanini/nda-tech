@@ -59,12 +59,12 @@ tests/                # Um arquivo por módulo testado; helpers/fakeDb.js = banc
 
 ## Integração com o Deal (DRI v2)
 
-- **Comando** `POST /api/integracoes/convites` (`nda.convite.criar`): Bearer `INTEGRACAO_DEAL_TOKEN` + HMAC `INTEGRACAO_DEAL_HMAC`
-  (e `_ANTERIOR` na rotação), janela de 300 s, `Idempotency-Key`. O token do convite só existe na resposta e no e-mail; no banco, só o hash.
+- **Comando** `POST /api/integracoes/convites` (`nda.convite.criar`): Bearer `INTEGRATION_DEAL_TOKEN` + HMAC `INTEGRATION_DEAL_HMAC`
+  (e `_PREVIOUS` na rotação), janela de 300 s, `Idempotency-Key`. O token do convite só existe na resposta e no e-mail; no banco, só o hash.
 - **Formulário** `GET /c/:token`: e-mail travado (servidor sobrescreve o do POST). Sem token só com `LEGACY_NDA_FORM_ENABLED=true`.
 - **Webhook DocuSeal** `POST /api/integracoes/docuseal/webhook`: header `X-Docuseal-Secret` = `DOCUSEAL_WEBHOOK_SECRET`.
   Uma assinatura (`form.completed`) → `nda.assinatura.parcial`; 4/4 → um único `nda.assinado`.
-- **Outbox** `outbox_eventos`: grava antes de enviar ao Deal (`DEAL_URL`, `INTEGRACAO_NDA_FORM_TOKEN/HMAC`); backoff 1 min → 12 h, até 24 h.
+- **Outbox** `outbox_eventos`: grava antes de enviar ao Deal (`DEAL_URL`, `INTEGRATION_NDA_FORM_TOKEN/HMAC`); backoff 1 min → 12 h, até 24 h.
   Retentativa e lembretes por Cloud Scheduler (`POST /api/jobs/outbox`, `/api/jobs/lembretes`, Bearer `JOBS_TOKEN`).
 - **Assinaturas no DocuSeal**: `SIGNATURE_FIELDS` em `docusealService.js` (coordenadas da página de assinaturas, última do PDF).
   Mudou `templates/nda.html`? Gere o PDF, confira a última página e recalibre.

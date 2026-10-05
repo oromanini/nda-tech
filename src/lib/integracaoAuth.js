@@ -19,7 +19,7 @@ const env = (nome) => (process.env[nome] || '').trim();
 /** Credenciais de quem chama o nda-form (hoje só o Deal). Lidas a cada chamada: rotação e testes. */
 function credencialDaOrigem(origem) {
   if (origem !== 'deal') return null;
-  return { token: env('INTEGRACAO_DEAL_TOKEN'), hmac: env('INTEGRACAO_DEAL_HMAC'), hmacAnterior: env('INTEGRACAO_DEAL_HMAC_ANTERIOR') };
+  return { token: env('INTEGRATION_DEAL_TOKEN'), hmac: env('INTEGRATION_DEAL_HMAC'), hmacAnterior: env('INTEGRATION_DEAL_HMAC_PREVIOUS') };
 }
 
 function autenticarChamada(headers, corpoBruto, agoraSegundos = Math.floor(Date.now() / 1000)) {

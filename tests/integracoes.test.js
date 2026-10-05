@@ -8,9 +8,9 @@ jest.mock('../src/services/emailService');
 jest.mock('../src/services/docusealService');
 
 process.env.JWT_SECRET = 'test-secret';
-process.env.INTEGRACAO_DEAL_TOKEN = 'tok-deal-teste';
-process.env.INTEGRACAO_DEAL_HMAC = 'hmac-deal-atual';
-process.env.INTEGRACAO_DEAL_HMAC_ANTERIOR = 'hmac-deal-anterior';
+process.env.INTEGRATION_DEAL_TOKEN = 'tok-deal-teste';
+process.env.INTEGRATION_DEAL_HMAC = 'hmac-deal-atual';
+process.env.INTEGRATION_DEAL_HMAC_PREVIOUS = 'hmac-deal-anterior';
 process.env.NDA_PUBLIC_URL = 'https://nda.alluz.tech';
 
 const pool = require('../src/db/connection');
@@ -31,10 +31,10 @@ function enviar(corpo, o = {}) {
   const ts = String(o.ts ?? agora());
   const r = request(app).post('/api/integracoes/convites')
     .set('Content-Type', 'application/json')
-    .set('Authorization', `Bearer ${o.token ?? process.env.INTEGRACAO_DEAL_TOKEN}`)
+    .set('Authorization', `Bearer ${o.token ?? process.env.INTEGRATION_DEAL_TOKEN}`)
     .set('X-Alluz-Origem', o.origem ?? 'deal')
     .set('X-Alluz-Timestamp', ts)
-    .set('X-Alluz-Assinatura', o.assinatura ?? assinar(o.segredo ?? process.env.INTEGRACAO_DEAL_HMAC, ts, bruto));
+    .set('X-Alluz-Assinatura', o.assinatura ?? assinar(o.segredo ?? process.env.INTEGRATION_DEAL_HMAC, ts, bruto));
   if (o.chave) r.set('Idempotency-Key', o.chave);
   return r.send(bruto);
 }
@@ -65,7 +65,7 @@ describe('autenticação do comando', () => {
   });
   it('corpo alterado depois de assinar ⇒ 401', async () => {
     const bruto = JSON.stringify(comando);
-    const res = await enviar(comando, { raw: bruto.replace('Maria', 'Mario'), assinatura: assinar(process.env.INTEGRACAO_DEAL_HMAC, String(agora()), bruto) });
+    const res = await enviar(comando, { raw: bruto.replace('Maria', 'Mario'), assinatura: assinar(process.env.INTEGRATION_DEAL_HMAC, String(agora()), bruto) });
     expect(res.status).toBe(401);
   });
   it('timestamp fora da janela de 300 s (passado e futuro) ⇒ 401', async () => {
@@ -75,14 +75,14 @@ describe('autenticação do comando', () => {
   it('token errado, origem desconhecida ou sem credencial ⇒ 401', async () => {
     expect((await enviar(comando, { token: 'errado' })).status).toBe(401);
     expect((await enviar(comando, { origem: 'aurora' })).status).toBe(401);
-    const antes = process.env.INTEGRACAO_DEAL_HMAC;
-    process.env.INTEGRACAO_DEAL_HMAC = '';
-    try { expect((await enviar(comando, { segredo: '' })).status).toBe(401); } finally { process.env.INTEGRACAO_DEAL_HMAC = antes; }
+    const antes = process.env.INTEGRATION_DEAL_HMAC;
+    process.env.INTEGRATION_DEAL_HMAC = '';
+    try { expect((await enviar(comando, { segredo: '' })).status).toBe(401); } finally { process.env.INTEGRATION_DEAL_HMAC = antes; }
   });
   it('segredo anterior vazio não aceita assinatura feita com segredo vazio', async () => {
-    const antes = process.env.INTEGRACAO_DEAL_HMAC_ANTERIOR;
-    process.env.INTEGRACAO_DEAL_HMAC_ANTERIOR = '';
-    try { expect((await enviar(comando, { segredo: '' })).status).toBe(401); } finally { process.env.INTEGRACAO_DEAL_HMAC_ANTERIOR = antes; }
+    const antes = process.env.INTEGRATION_DEAL_HMAC_PREVIOUS;
+    process.env.INTEGRATION_DEAL_HMAC_PREVIOUS = '';
+    try { expect((await enviar(comando, { segredo: '' })).status).toBe(401); } finally { process.env.INTEGRATION_DEAL_HMAC_PREVIOUS = antes; }
   });
 });
 

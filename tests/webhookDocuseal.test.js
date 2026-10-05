@@ -8,8 +8,8 @@ jest.mock('../src/services/docusealService');
 process.env.JWT_SECRET = 'test-secret';
 process.env.DOCUSEAL_WEBHOOK_SECRET = 'segredo-webhook';
 process.env.DEAL_URL = 'https://deal.test/';
-process.env.INTEGRACAO_NDA_FORM_TOKEN = 'tok-nda-form';
-process.env.INTEGRACAO_NDA_FORM_HMAC = 'hmac-nda-form';
+process.env.INTEGRATION_NDA_FORM_TOKEN = 'tok-nda-form';
+process.env.INTEGRATION_NDA_FORM_HMAC = 'hmac-nda-form';
 
 const pool = require('../src/db/connection');
 const { criarFakeDb } = require('./helpers/fakeDb');

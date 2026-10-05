@@ -1,8 +1,8 @@
 jest.mock('../src/db/connection');
 
 process.env.DEAL_URL = 'https://deal.test';
-process.env.INTEGRACAO_NDA_FORM_TOKEN = 'tok';
-process.env.INTEGRACAO_NDA_FORM_HMAC = 'hmac';
+process.env.INTEGRATION_NDA_FORM_TOKEN = 'tok';
+process.env.INTEGRATION_NDA_FORM_HMAC = 'hmac';
 
 const pool = require('../src/db/connection');
 const { criarFakeDb } = require('./helpers/fakeDb');

@@ -10,8 +10,8 @@ jest.mock('../src/services/lembretesService', () => ({ enviarLembretes: jest.fn(
 
 process.env.JWT_SECRET = 'test-secret';
 process.env.JOBS_TOKEN = 'token-do-scheduler';
-process.env.INTEGRACAO_DEAL_TOKEN = 'tok-deal';
-process.env.INTEGRACAO_DEAL_HMAC = 'hmac-deal';
+process.env.INTEGRATION_DEAL_TOKEN = 'tok-deal';
+process.env.INTEGRATION_DEAL_HMAC = 'hmac-deal';
 
 const { processarOutbox } = require('../src/services/outboxService');
 const { enviarLembretes } = require('../src/services/lembretesService');

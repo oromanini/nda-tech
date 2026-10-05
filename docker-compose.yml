@@ -47,12 +47,12 @@ services:
       NDA_PUBLIC_URL: ${NDA_PUBLIC_URL:-http://localhost:3000}
       LEGACY_NDA_FORM_ENABLED: ${LEGACY_NDA_FORM_ENABLED:-true}
       # Só desenvolvimento (mesmos defaults do docker-compose do Deal). Em produção: openssl rand -hex 32.
-      INTEGRACAO_DEAL_TOKEN: ${INTEGRACAO_DEAL_TOKEN:-dev-deal-nda-token-trocar}
-      INTEGRACAO_DEAL_HMAC: ${INTEGRACAO_DEAL_HMAC:-dev-deal-nda-hmac-trocar}
-      INTEGRACAO_DEAL_HMAC_ANTERIOR: ${INTEGRACAO_DEAL_HMAC_ANTERIOR:-}
+      INTEGRATION_DEAL_TOKEN: ${INTEGRATION_DEAL_TOKEN:-dev-deal-nda-token-trocar}
+      INTEGRATION_DEAL_HMAC: ${INTEGRATION_DEAL_HMAC:-dev-deal-nda-hmac-trocar}
+      INTEGRATION_DEAL_HMAC_PREVIOUS: ${INTEGRATION_DEAL_HMAC_PREVIOUS:-}
       DEAL_URL: ${DEAL_URL:-http://host.docker.internal:4000}
-      INTEGRACAO_NDA_FORM_TOKEN: ${INTEGRACAO_NDA_FORM_TOKEN:-dev-nda-form-token-trocar}
-      INTEGRACAO_NDA_FORM_HMAC: ${INTEGRACAO_NDA_FORM_HMAC:-dev-nda-form-hmac-trocar}
+      INTEGRATION_NDA_FORM_TOKEN: ${INTEGRATION_NDA_FORM_TOKEN:-dev-nda-form-token-trocar}
+      INTEGRATION_NDA_FORM_HMAC: ${INTEGRATION_NDA_FORM_HMAC:-dev-nda-form-hmac-trocar}
       JOBS_TOKEN: ${JOBS_TOKEN:-dev-jobs-token-trocar}
     depends_on:
       db:

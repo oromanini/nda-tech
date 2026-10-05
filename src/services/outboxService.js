@@ -44,8 +44,8 @@ async function enfileirar(envelope, dedupeKey) {
 
 const destino = () => ({
   url: (process.env.DEAL_URL || '').replace(/\/+$/, ''),
-  token: (process.env.INTEGRACAO_NDA_FORM_TOKEN || '').trim(),
-  hmac: (process.env.INTEGRACAO_NDA_FORM_HMAC || '').trim(),
+  token: (process.env.INTEGRATION_NDA_FORM_TOKEN || '').trim(),
+  hmac: (process.env.INTEGRATION_NDA_FORM_HMAC || '').trim(),
 });
 
 async function reagendar(linha, motivo, agora) {

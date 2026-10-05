@@ -81,11 +81,11 @@ jobs:
             NDA_PUBLIC_URL=https://nda.alluz.tech
             LEGACY_NDA_FORM_ENABLED=true
             DEAL_URL=https://deal.alluz.tech
-            INTEGRACAO_DEAL_TOKEN=${{ secrets.INTEGRACAO_DEAL_TOKEN }}
-            INTEGRACAO_DEAL_HMAC=${{ secrets.INTEGRACAO_DEAL_HMAC }}
-            INTEGRACAO_DEAL_HMAC_ANTERIOR=${{ secrets.INTEGRACAO_DEAL_HMAC_ANTERIOR }}
-            INTEGRACAO_NDA_FORM_TOKEN=${{ secrets.INTEGRACAO_NDA_FORM_TOKEN }}
-            INTEGRACAO_NDA_FORM_HMAC=${{ secrets.INTEGRACAO_NDA_FORM_HMAC }}
+            INTEGRATION_DEAL_TOKEN=${{ secrets.INTEGRATION_DEAL_TOKEN }}
+            INTEGRATION_DEAL_HMAC=${{ secrets.INTEGRATION_DEAL_HMAC }}
+            INTEGRATION_DEAL_HMAC_PREVIOUS=${{ secrets.INTEGRATION_DEAL_HMAC_PREVIOUS }}
+            INTEGRATION_NDA_FORM_TOKEN=${{ secrets.INTEGRATION_NDA_FORM_TOKEN }}
+            INTEGRATION_NDA_FORM_HMAC=${{ secrets.INTEGRATION_NDA_FORM_HMAC }}
             DOCUSEAL_WEBHOOK_SECRET=${{ secrets.DOCUSEAL_WEBHOOK_SECRET }}
             JOBS_TOKEN=${{ secrets.JOBS_TOKEN }}
 
@@ -115,4 +115,4 @@ jobs:
             fi
           }
           upsert_job nda-form-job-outbox "* * * * *" /api/jobs/outbox
-          upsert_job nda-form-job-lembretes "0 10 * * *" /api/jobs/lembretes
+          upsert_job nda-form-job-reminders "0 10 * * *" /api/jobs/lembretes
