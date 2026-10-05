@@ -29,6 +29,8 @@ const ndaLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Muitas tentativas. Tente novamente em 1 hora.' },
+  // Os testes de integração fazem muitos POSTs do mesmo IP; o limite é testado à parte (tests/rateLimit.test.js).
+  skip: () => process.env.NODE_ENV === 'test',
 });
 
 app.use('/api/gerar-nda', ndaLimiter);
