@@ -97,6 +97,8 @@ jobs:
           JOBS_TOKEN: ${{ secrets.JOBS_TOKEN }}
           SERVICE_URL: ${{ steps.deploy.outputs.url }}
         run: |
+          # Sem o token, o Scheduler criaria jobs que o serviço recusa (401) em silêncio. Falha o passo (o valor não é impresso).
+          : "${JOBS_TOKEN:?secret JOBS_TOKEN não configurado}"
           upsert_job() {
             local JOB="$1" SCHEDULE="$2" PATH_="$3"
             local COMMON=(
