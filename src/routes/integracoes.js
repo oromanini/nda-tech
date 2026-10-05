@@ -43,13 +43,14 @@ router.post('/integracoes/convites', async (req, res) => {
     if (chave) {
       // A chave é reservada ANTES de criar o convite (status 0 = em processamento). Quem perde a corrida não cria nada
       // (criar cancelaria o convite do vencedor) e devolve a resposta que o vencedor gravar.
-      const [res0] = await pool.query('INSERT IGNORE INTO idempotencia_comandos (chave, status, resposta) VALUES (?, 0, ?)', [chave, '{}']);
-      if (res0.affectedRows === 0) {
+      if (await reservarChave(chave)) {
+        reservada = true;
+      } else {
         const original = await respostaGravada(chave);
-        if (!original) return res.status(409).json({ error: 'Comando em processamento; tente novamente.' });
+        // 503 (e não 4xx): a outbox do Deal trata 4xx como erro de contrato e não retenta. Com 503 ele retenta a mesma chave.
+        if (!original) return res.status(503).set('Retry-After', '5').json({ error: 'Comando em processamento; tente novamente.' });
         return res.status(original.status).json(original.corpo);
       }
-      reservada = true;
     }
 
     const { convite_id, link, submissoesParaArquivar } = await criarConvite(comando);
@@ -69,21 +70,38 @@ router.post('/integracoes/convites', async (req, res) => {
   }
 });
 
-const ESPERA_MS = 10000;
-const INTERVALO_MS = 50;
+// Ajustável nos testes (router.opcoes) sem variável de ambiente nova.
+const opcoes = { esperaMs: 10000, intervaloMs: 50, reservaAbandonadaMin: 2 };
+router.opcoes = opcoes;
 
-/** Resposta gravada pelo vencedor da corrida; espera enquanto ele ainda processa (status 0). null = não saiu a tempo. */
+/**
+ * Reserva a chave (status 0). Reserva abandonada (processo morreu entre a reserva e a resposta: status 0 e mais de 2 min)
+ * é assumida uma única vez: o DELETE condicional só apaga para um processo (affectedRows = 1) e o INSERT IGNORE desempata.
+ */
+async function reservarChave(chave) {
+  const inserir = async () => (await pool.query('INSERT IGNORE INTO idempotencia_comandos (chave, status, resposta) VALUES (?, 0, ?)', [chave, '{}']))[0].affectedRows === 1;
+  if (await inserir()) return true;
+  const [del] = await pool.query(
+    `DELETE FROM idempotencia_comandos WHERE chave = ? AND status = 0 AND criado_em < NOW() - INTERVAL ${Number(opcoes.reservaAbandonadaMin)} MINUTE`,
+    [chave]
+  );
+  if (del.affectedRows !== 1) return false;
+  console.warn('idempotência: reserva abandonada assumida');
+  return inserir();
+}
+
+/** Resposta gravada pelo vencedor da corrida; espera enquanto ele ainda processa (status 0). null = não saiu a tempo ou ele falhou. */
 async function respostaGravada(chave) {
-  const limite = Date.now() + ESPERA_MS;
+  const limite = Date.now() + opcoes.esperaMs;
   for (;;) {
     const [rows] = await pool.query('SELECT status, resposta FROM idempotencia_comandos WHERE chave = ? LIMIT 1', [chave]);
     if (rows.length && rows[0].status !== 0) {
       const r = rows[0].resposta;
       return { status: rows[0].status, corpo: typeof r === 'string' ? JSON.parse(r) : r };
     }
-    // Sem linha: o vencedor falhou e liberou a chave. Quem espera devolve 409 e o Deal retenta (a outbox já faz isso).
+    // Sem linha: o vencedor falhou e liberou a chave. Quem espera responde 503 + Retry-After e o Deal retenta com a mesma chave.
     if (!rows.length || Date.now() >= limite) return null;
-    await new Promise((r) => setTimeout(r, INTERVALO_MS));
+    await new Promise((r) => setTimeout(r, opcoes.intervaloMs));
   }
 }
 

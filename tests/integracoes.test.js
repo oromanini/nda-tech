@@ -148,6 +148,78 @@ describe('convite: token e idempotência', () => {
     expect(ok.status).toBe(201);
   });
 
+  describe('reserva da Idempotency-Key: 503 + Retry-After e reserva abandonada', () => {
+    const opcoes = require('../src/routes/integracoes').opcoes;
+    const original = { ...opcoes };
+    afterEach(() => Object.assign(opcoes, original));
+
+    it('(a) perdedor cujo vencedor falha e libera a chave recebe 503 com Retry-After (nunca 409), e o retry funciona', async () => {
+      const chave = 'k:vencedor-falha';
+      let primeira = true;
+      pool.query.mockImplementation(async (sql, p) => {
+        // criarConvite do vencedor: demora e falha, enquanto o perdedor já está esperando.
+        if (primeira && /FROM convites c LEFT JOIN clientes cl/.test(sql)) {
+          primeira = false;
+          await new Promise((r) => setTimeout(r, 120));
+          throw new Error('banco caiu');
+        }
+        return db.query(sql, p);
+      });
+      const erro = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const [a, b] = await Promise.all([enviar(comando, { chave }), enviar(comando, { chave })]);
+      erro.mockRestore();
+      const [vencedor, perdedor] = a.status === 500 ? [a, b] : [b, a];
+      expect(vencedor.status).toBe(500);
+      expect(perdedor.status).toBe(503);
+      expect(perdedor.headers['retry-after']).toBe('5');
+      expect(db.st.convites).toHaveLength(0);
+
+      pool.query.mockImplementation(db.query);
+      expect((await enviar(comando, { chave })).status).toBe(201); // o Deal retenta com a mesma chave
+    });
+
+    it('(b) reserva com status 0 criada há 5 minutos é considerada abandonada: assumida, convite criado (201)', async () => {
+      const chave = 'k:abandonada';
+      db.st.idem[chave] = { status: 0, resposta: '{}', criado_em: new Date(Date.now() - 5 * 60000) };
+      const aviso = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const r = await enviar(comando, { chave });
+      aviso.mockRestore();
+      expect(r.status).toBe(201);
+      expect(db.st.convites).toHaveLength(1);
+      expect(db.st.idem[chave].status).toBe(201);
+      // e a repetição devolve a resposta gravada, sem criar outro convite
+      expect((await enviar(comando, { chave })).body).toEqual(r.body);
+      expect(db.st.convites).toHaveLength(1);
+    });
+
+    it('(b2) dois processos disputando a reserva abandonada: só um assume e cria o convite', async () => {
+      const chave = 'k:abandonada-disputa';
+      db.st.idem[chave] = { status: 0, resposta: '{}', criado_em: new Date(Date.now() - 5 * 60000) };
+      opcoes.esperaMs = 300;
+      const aviso = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      pool.query.mockImplementation(async (sql, p) => {
+        if (/^\s*INSERT INTO convites/.test(sql)) await new Promise((r) => setTimeout(r, 60));
+        return db.query(sql, p);
+      });
+      const [a, b] = await Promise.all([enviar(comando, { chave }), enviar(comando, { chave })]);
+      aviso.mockRestore();
+      expect([a.status, b.status]).toEqual([201, 201]);
+      expect(b.body).toEqual(a.body);
+      expect(db.st.convites).toHaveLength(1);
+    });
+
+    it('(c) reserva recente (status 0) continua devolvendo 503 depois da espera, sem criar convite', async () => {
+      const chave = 'k:em-andamento';
+      db.st.idem[chave] = { status: 0, resposta: '{}', criado_em: new Date() };
+      opcoes.esperaMs = 150;
+      const r = await enviar(comando, { chave });
+      expect(r.status).toBe(503);
+      expect(r.headers['retry-after']).toBe('5');
+      expect(db.st.convites).toHaveLength(0);
+      expect(db.st.idem[chave].status).toBe(0); // reserva alheia intacta
+    });
+  });
+
   it('reenvio (chave nova) invalida o convite anterior', async () => {
     const a = await enviar(comando, { chave: 'k:1' });
     const b = await enviar(comando, { chave: 'k:2' });
