@@ -235,6 +235,46 @@ describe('formulário por convite', () => {
       expect(db.st.clientes).toHaveLength(1);
     });
 
+    describe('falha no e-mail do link de assinatura', () => {
+      const quatro = [
+        { nome: 'Maria', email: 'maria@bpoexemplo.com.br', link: 'l1' }, { nome: 'Alluz', email: 'nda@alluz.tech', link: 'l2' },
+        { nome: 'João', email: 'joao@x.co', link: 'l3' }, { nome: 'Ana', email: 'ana@alluz.tech', link: 'l4' },
+      ];
+      beforeEach(() => criarSubmission.mockResolvedValue({ submissionId: 777, signatarios: quatro }));
+
+      it('falhou para o cliente: convites.falha_email = 1, log com convite_id e SEM e-mail; o NDA segue (200)', async () => {
+        const token = await convite();
+        const erro = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+        enviarLinkAssinatura.mockImplementation(async (_n, email) => { if (email === quatro[0].email) throw new Error('smtp 550'); });
+        const res = await request(app).post('/api/gerar-nda').send({ ...dadosPJ, convite_token: token });
+        const saida = JSON.stringify([...erro.mock.calls, ...log.mock.calls]);
+        erro.mockRestore(); log.mockRestore();
+        expect(res.status).toBe(200);
+        expect(db.st.convites[0].falha_email).toBe(1);
+        expect(saida).toContain(db.st.convites[0].id);
+        expect(saida).not.toContain('@'); // nenhum e-mail em log
+      });
+
+      it('falhou só para uma testemunha: não marca falha_email (o cliente recebeu o link)', async () => {
+        const token = await convite();
+        const erro = jest.spyOn(console, 'error').mockImplementation(() => {});
+        enviarLinkAssinatura.mockImplementation(async (_n, email) => { if (email === quatro[2].email) throw new Error('smtp'); });
+        await request(app).post('/api/gerar-nda').send({ ...dadosPJ, convite_token: token });
+        erro.mockRestore();
+        expect(db.st.convites[0].falha_email).toBeUndefined();
+      });
+
+      it('tudo certo: nada marcado', async () => {
+        const token = await convite();
+        const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+        enviarLinkAssinatura.mockResolvedValue();
+        await request(app).post('/api/gerar-nda').send({ ...dadosPJ, convite_token: token });
+        log.mockRestore();
+        expect(db.st.convites[0].falha_email).toBeUndefined();
+      });
+    });
+
     it('token inválido ⇒ 404 neutro, sem consultar PDF/DocuSeal', async () => {
       const res = await request(app).post('/api/gerar-nda').send({ ...dadosPJ, convite_token: 'z'.repeat(43), email: 'a@b.co' });
       expect(res.status).toBe(404);

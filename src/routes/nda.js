@@ -104,9 +104,14 @@ router.post('/gerar-nda', async (req, res) => {
         const s = signatarios[i];
         try {
           await enviarLinkAssinatura(s.nome, s.email, s.link, nomeCliente, papeis[i]);
-          console.log(`Email enviado para ${s.email} (${papeis[i]})`);
+          console.log(`Link de assinatura enviado (${papeis[i]}, NDA ${result.insertId})`);
         } catch (emailErr) {
-          console.error(`Falha ao enviar email para ${s.email}:`, emailErr.message);
+          // Sem e-mail no log (dado pessoal). Falha no link do cliente: o convite fica marcado para o admin enxergar.
+          console.error(`Falha ao enviar link de assinatura (${papeis[i]}${convite ? `, convite ${convite.id}` : `, NDA ${result.insertId}`}):`, emailErr.message);
+          if (convite && papeis[i] === 'cliente') {
+            try { await pool.query('UPDATE convites SET falha_email = 1 WHERE id = ?', [convite.id]); }
+            catch (e) { console.error(`Falha ao marcar falha_email (convite ${convite.id}):`, e.message); }
+          }
         }
       }
 

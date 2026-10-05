@@ -72,3 +72,17 @@ describe('GET /api/admin/clientes/:id', () => {
     expect(res.body.razao_social).toBe('Empresa A');
   });
 });
+
+describe('GET /api/admin/clientes — falha de e-mail do convite visível ao admin', () => {
+  it('junta convites e devolve falha_email', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ total: 1 }]])
+      .mockResolvedValueOnce([[{ id: 3, razao_social: 'BPO', falha_email: 1 }]]);
+    const res = await request(app).get('/api/admin/clientes').set('Authorization', authHeader());
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].falha_email).toBe(1);
+    const sql = pool.query.mock.calls[1][0];
+    expect(sql).toMatch(/LEFT JOIN convites ON convites\.id = clientes\.convite_id/);
+    expect(sql).toMatch(/COALESCE\(convites\.falha_email, 0\) AS falha_email/);
+  });
+});

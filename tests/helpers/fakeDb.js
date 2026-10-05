@@ -45,6 +45,8 @@ function criarFakeDb() {
       return [{}];
     }
 
+    if (/^UPDATE convites SET falha_email = 1 WHERE id/.test(s)) { st.convites.find((c) => c.id === p[0]).falha_email = 1; return [{}]; }
+
     // ── idempotência ────────────────────────────────────────────────────────
     if (/^SELECT status, resposta FROM idempotencia_comandos/.test(s)) return [st.idem[p[0]] ? [st.idem[p[0]]] : []];
     if (/^INSERT IGNORE INTO idempotencia_comandos/.test(s)) {

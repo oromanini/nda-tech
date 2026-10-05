@@ -71,11 +71,20 @@ async function runMigrations() {
         criado_em          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         lembretes_enviados INT NOT NULL DEFAULT 0,
         ultimo_lembrete_em DATETIME NULL,
+        falha_email        TINYINT(1) NOT NULL DEFAULT 0,
         UNIQUE KEY uq_convites_token (token_hash),
         KEY idx_convites_projeto (projeto_uuid, status),
         KEY idx_convites_lembrete (status, criado_em)
       )
     `);
+
+    // Bancos que já tinham a tabela convites (criada antes desta coluna).
+    const [colsConvites] = await conn.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'convites'`
+    );
+    if (!colsConvites.some((r) => r.COLUMN_NAME === 'falha_email')) {
+      await conn.query('ALTER TABLE convites ADD COLUMN falha_email TINYINT(1) NOT NULL DEFAULT 0');
+    }
 
     // Idempotência dos comandos (Idempotency-Key): repetição devolve a resposta original.
     await conn.query(`
