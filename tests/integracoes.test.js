@@ -119,6 +119,35 @@ describe('convite: token e idempotência', () => {
     expect(b.body).toEqual(a.body);
     expect(db.st.convites).toHaveLength(1);
   });
+  it('duas chamadas simultâneas com a mesma chave: mesmo link, um só convite, e o link continua abrindo o formulário', async () => {
+    // Criação lenta: a segunda chamada chega enquanto a primeira ainda está criando o convite (a corrida real).
+    pool.query.mockImplementation(async (sql, p) => {
+      if (/^\s*INSERT INTO convites/.test(sql)) await new Promise((r) => setTimeout(r, 80));
+      return db.query(sql, p);
+    });
+    const chave = `${comando.projeto_uuid}:nda.convite.criar:1`;
+    const [a, b] = await Promise.all([enviar(comando, { chave }), enviar(comando, { chave })]);
+    expect([a.status, b.status]).toEqual([201, 201]);
+    expect(b.body).toEqual(a.body);
+    expect(db.st.convites).toHaveLength(1);
+    expect(db.st.convites[0].status).toBe('pendente'); // o perdedor não cancelou o convite do vencedor
+    const page = await request(app).get(`/c/${tokenDoLink(a.body.link)}`);
+    expect(page.status).toBe(200);
+    expect((await request(app).get(`/api/convites/${tokenDoLink(b.body.link)}`)).status).toBe(200);
+  });
+
+  it('se o vencedor falha, a chave é liberada e o retry da mesma chave funciona', async () => {
+    const chave = 'k:falha';
+    pool.query.mockImplementationOnce(async (sql, p) => db.query(sql, p)); // reserva
+    pool.query.mockImplementationOnce(async () => { throw new Error('banco caiu'); }); // criarConvite (SELECT abertos)
+    const ruim = await enviar(comando, { chave });
+    expect(ruim.status).toBe(500);
+    expect(db.st.idem[chave]).toBeUndefined();
+    pool.query.mockImplementation(db.query);
+    const ok = await enviar(comando, { chave });
+    expect(ok.status).toBe(201);
+  });
+
   it('reenvio (chave nova) invalida o convite anterior', async () => {
     const a = await enviar(comando, { chave: 'k:1' });
     const b = await enviar(comando, { chave: 'k:2' });

@@ -38,24 +38,23 @@ router.post('/integracoes/convites', async (req, res) => {
   if (erros.length) return res.status(422).json({ error: 'Comando inválido', detalhes: erros });
 
   const chave = typeof req.headers['idempotency-key'] === 'string' ? req.headers['idempotency-key'].slice(0, 191) : '';
+  let reservada = false;
   try {
     if (chave) {
-      const [ant] = await pool.query('SELECT status, resposta FROM idempotencia_comandos WHERE chave = ? LIMIT 1', [chave]);
-      if (ant.length) return res.status(ant[0].status).json(typeof ant[0].resposta === 'string' ? JSON.parse(ant[0].resposta) : ant[0].resposta);
+      // A chave é reservada ANTES de criar o convite (status 0 = em processamento). Quem perde a corrida não cria nada
+      // (criar cancelaria o convite do vencedor) e devolve a resposta que o vencedor gravar.
+      const [res0] = await pool.query('INSERT IGNORE INTO idempotencia_comandos (chave, status, resposta) VALUES (?, 0, ?)', [chave, '{}']);
+      if (res0.affectedRows === 0) {
+        const original = await respostaGravada(chave);
+        if (!original) return res.status(409).json({ error: 'Comando em processamento; tente novamente.' });
+        return res.status(original.status).json(original.corpo);
+      }
+      reservada = true;
     }
 
     const { convite_id, link, submissoesParaArquivar } = await criarConvite(comando);
     const resposta = { convite_id, link };
-
-    if (chave) {
-      const [ins] = await pool.query('INSERT IGNORE INTO idempotencia_comandos (chave, status, resposta) VALUES (?, 201, ?)', [chave, JSON.stringify(resposta)]);
-      if (ins.affectedRows === 0) {
-        // Corrida: outra requisição com a mesma chave gravou primeiro. Cancela este convite e devolve a resposta dela.
-        await pool.query(`UPDATE convites SET status = 'cancelado' WHERE id = ?`, [convite_id]);
-        const [orig] = await pool.query('SELECT status, resposta FROM idempotencia_comandos WHERE chave = ? LIMIT 1', [chave]);
-        return res.status(orig[0].status).json(typeof orig[0].resposta === 'string' ? JSON.parse(orig[0].resposta) : orig[0].resposta);
-      }
-    }
+    if (chave) await pool.query('UPDATE idempotencia_comandos SET status = 201, resposta = ? WHERE chave = ?', [JSON.stringify(resposta), chave]);
 
     // Reenvio com assinatura em andamento: a submissão antiga é arquivada no DocuSeal (melhor esforço).
     for (const sub of submissoesParaArquivar) {
@@ -63,10 +62,30 @@ router.post('/integracoes/convites', async (req, res) => {
     }
     res.status(201).json(resposta);
   } catch (err) {
+    // Reserva sem resposta travaria os retries da mesma chave: libera para o Deal poder tentar de novo.
+    if (reservada) { try { await pool.query('DELETE FROM idempotencia_comandos WHERE chave = ? AND status = 0', [chave]); } catch (e) { console.error('Erro ao liberar chave:', e.message); } }
     console.error('Erro ao criar convite:', err.message);
     res.status(500).json({ error: 'Erro ao criar convite' });
   }
 });
+
+const ESPERA_MS = 10000;
+const INTERVALO_MS = 50;
+
+/** Resposta gravada pelo vencedor da corrida; espera enquanto ele ainda processa (status 0). null = não saiu a tempo. */
+async function respostaGravada(chave) {
+  const limite = Date.now() + ESPERA_MS;
+  for (;;) {
+    const [rows] = await pool.query('SELECT status, resposta FROM idempotencia_comandos WHERE chave = ? LIMIT 1', [chave]);
+    if (rows.length && rows[0].status !== 0) {
+      const r = rows[0].resposta;
+      return { status: rows[0].status, corpo: typeof r === 'string' ? JSON.parse(r) : r };
+    }
+    // Sem linha: o vencedor falhou e liberou a chave. Quem espera devolve 409 e o Deal retenta (a outbox já faz isso).
+    if (!rows.length || Date.now() >= limite) return null;
+    await new Promise((r) => setTimeout(r, INTERVALO_MS));
+  }
+}
 
 /** GET /api/integracoes/eventos/falhas — eventos que esgotaram as tentativas (o Deal lista). */
 router.get('/integracoes/eventos/falhas', async (req, res) => {

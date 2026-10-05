@@ -49,9 +49,11 @@ function criarFakeDb() {
     if (/^SELECT status, resposta FROM idempotencia_comandos/.test(s)) return [st.idem[p[0]] ? [st.idem[p[0]]] : []];
     if (/^INSERT IGNORE INTO idempotencia_comandos/.test(s)) {
       if (st.idem[p[0]]) return [{ affectedRows: 0 }];
-      st.idem[p[0]] = { status: 201, resposta: p[1] };
+      st.idem[p[0]] = { status: 0, resposta: p[1] };
       return [{ affectedRows: 1 }];
     }
+    if (/^UPDATE idempotencia_comandos SET status = 201/.test(s)) { st.idem[p[1]] = { status: 201, resposta: p[0] }; return [{}]; }
+    if (/^DELETE FROM idempotencia_comandos/.test(s)) { if (st.idem[p[0]] && st.idem[p[0]].status === 0) delete st.idem[p[0]]; return [{}]; }
 
     // ── clientes (NDAs) ─────────────────────────────────────────────────────
     if (/^INSERT INTO clientes/.test(s)) {
