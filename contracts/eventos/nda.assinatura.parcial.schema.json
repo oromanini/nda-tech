@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.alluz.tech/v1/eventos/nda.assinatura.parcial.schema.json",
+  "title": "dados de nda.assinatura.parcial",
+  "allOf": [
+    {
+      "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/progresso_assinatura"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "nda_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "nda_id"
+      ]
+    }
+  ],
+  "type": "object"
+}

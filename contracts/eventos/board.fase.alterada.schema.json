@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.alluz.tech/v1/eventos/board.fase.alterada.schema.json",
+  "title": "dados de board.fase.alterada",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "board_projeto_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "fase": {
+      "enum": [
+        "implementacao",
+        "testes",
+        "implementacao_finalizada",
+        "entrega"
+      ]
+    },
+    "alterado_por": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    }
+  },
+  "required": [
+    "board_projeto_id",
+    "fase"
+  ]
+}

@@ -3,7 +3,7 @@ jest.mock('https');
 const https = require('https');
 const { EventEmitter } = require('events');
 
-const { criarSubmission } = require('../src/services/docusealService');
+const { criarSubmission, arquivarSubmission, SIGNATURE_FIELDS } = require('../src/services/docusealService');
 
 function mockHttpsRequest(statusCode, responseBody) {
   const resEmitter = new EventEmitter();
@@ -106,10 +106,10 @@ describe('criarSubmission — sem pdfBuffer (fallback template estático)', () =
     expect(body.send_email).toBe(false);
   });
 
-  it('usa representante como nome quando razao_social não existe', async () => {
+  it('PJ assina pelo representante legal', async () => {
     mockHttpsRequest(200, respostaSubmissionTemplate);
 
-    await criarSubmission({ ...dadosBase, razao_social: '', representante: 'Rep Legal' });
+    await criarSubmission({ ...dadosBase, tipo_pessoa: 'PJ', razao_social: 'Empresa LTDA', representante: 'Rep Legal' });
 
     const bodyStr = https.request.mock.results[0].value.write.mock.calls[0][0];
     const body = JSON.parse(bodyStr);
@@ -206,57 +206,71 @@ describe('criarSubmission — com pdfBuffer (POST /submissions/pdf)', () => {
     expect(result.signatarios[3].link).toBe('https://docuseal.com/s/jkl');
   });
 
-  it('infere roles a partir dos nomes dos campos', async () => {
-    const camposTemplate = [
-      { name: 'ASSINATURA DIVULGANTE', type: 'signature', areas: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.05, page: 2, attachment_uuid: 'u' }] },
-      { name: 'ASSINATURA RECEPTORA',  type: 'signature', areas: [{ x: 0.5, y: 0.2, w: 0.3, h: 0.05, page: 2, attachment_uuid: 'u' }] },
-      { name: 'ASSINATURA T1',         type: 'signature', areas: [{ x: 0.1, y: 0.4, w: 0.3, h: 0.05, page: 2, attachment_uuid: 'u' }] },
-      { name: 'ASSINATURA T2',         type: 'signature', areas: [{ x: 0.5, y: 0.4, w: 0.3, h: 0.05, page: 2, attachment_uuid: 'u' }] },
-    ];
+  async function camposEnviados(camposTemplate, pdf = fakePdf) {
     mockHttpsSequence([
       { statusCode: 200, body: { fields: camposTemplate } },
       { statusCode: 200, body: respostaSubmissionPdf },
     ]);
+    await criarSubmission(dadosBase, pdf);
+    const idx = https.request.mock.calls.findIndex(([o]) => o.path === '/submissions/pdf');
+    return JSON.parse(https.request.mock.results[idx].value.write.mock.calls[0][0]).documents[0].fields;
+  }
 
-    await criarSubmission(dadosBase, fakePdf);
-
-    const calls = https.request.mock.calls;
-    const idx = calls.findIndex(([o]) => o.path === '/submissions/pdf');
-    const { documents } = JSON.parse(https.request.mock.results[idx].value.write.mock.calls[0][0]);
-    const fields = documents[0].fields;
-
-    expect(fields.find(f => f.name === 'ASSINATURA DIVULGANTE').role).toBe('DIVULGANTE');
-    expect(fields.find(f => f.name === 'ASSINATURA RECEPTORA').role).toBe('RECEPTORA');
-    expect(fields.find(f => f.name === 'ASSINATURA T1').role).toBe('TESTEMUNHA 1');
-    expect(fields.find(f => f.name === 'ASSINATURA T2').role).toBe('TESTEMUNHA 2');
+  it('assinaturas: 4 campos signature (um por signatário) na última página do PDF, 1-indexed', async () => {
+    const pdf6 = Buffer.from('%PDF-1.4\n' + '/Type /Page\n'.repeat(6) + '/Type /Pages\n%%EOF'); // 6 páginas
+    const fields = (await camposEnviados([], pdf6)).filter((f) => f.type === 'signature');
+    expect(fields.map((f) => f.role)).toEqual(['DIVULGANTE', 'RECEPTORA', 'TESTEMUNHA 1', 'TESTEMUNHA 2']);
+    for (const f of fields) {
+      expect(f.required).toBe(true);
+      expect(f.areas).toHaveLength(1);
+      expect(f.areas[0].page).toBe(6);
+      for (const k of ['x', 'y', 'w', 'h']) expect(f.areas[0][k]).toBeGreaterThan(0);
+      expect(f.areas[0].x + f.areas[0].w).toBeLessThanOrEqual(1);
+      expect(f.areas[0].y + f.areas[0].h).toBeLessThanOrEqual(1);
+    }
   });
 
-  it('remove attachment_uuid e converte pages para 1-indexed', async () => {
+  it('assinaturas não se sobrepõem e seguem o layout (cliente/Alluz na linha 1, testemunhas na linha 2)', () => {
+    const [cli, alz, t1, t2] = SIGNATURE_FIELDS;
+    expect(cli.y).toBe(alz.y);
+    expect(t1.y).toBe(t2.y);
+    expect(t1.y).toBeGreaterThan(cli.y + cli.h);
+    expect(cli.x + cli.w).toBeLessThan(alz.x);
+    expect(t1.x + t1.w).toBeLessThan(t2.x);
+  });
+
+  it('ignora as assinaturas do template base (coordenadas antigas) e usa as calibradas', async () => {
+    const antigas = [
+      { name: 'ASSINATURA DIVULGANTE', type: 'signature', areas: [{ x: 0.01, y: 0.99, w: 0.01, h: 0.01, page: 2, attachment_uuid: 'u' }] },
+      { name: 'ASSINATURA T2',         type: 'signature', areas: [{ x: 0.01, y: 0.99, w: 0.01, h: 0.01, page: 2, attachment_uuid: 'u' }] },
+    ];
+    const fields = await camposEnviados(antigas);
+    const sig = fields.filter((f) => f.type === 'signature');
+    expect(sig).toHaveLength(4); // nenhuma duplicada
+    expect(sig.find((f) => f.role === 'DIVULGANTE').areas[0].y).toBe(SIGNATURE_FIELDS[0].y);
+    expect(JSON.stringify(fields)).not.toContain('0.99');
+  });
+
+  it('mantém campos que não são assinatura (ex.: rubrica), sem attachment_uuid e com page 1-indexed', async () => {
     const camposTemplate = [
-      { name: 'RUBRICA DIVULGANTE',    type: 'initials',  areas: [{ x: 0.1, y: 0.9, w: 0.1, h: 0.03, page: 0, attachment_uuid: 'u' }] },
+      { name: 'RUBRICA DIVULGANTE', type: 'initials', areas: [{ x: 0.1, y: 0.9, w: 0.1, h: 0.03, page: 0, attachment_uuid: 'u' }] },
       { name: 'ASSINATURA DIVULGANTE', type: 'signature', areas: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.05, page: 2, attachment_uuid: 'u' }] },
     ];
-    // fakePdf tem 1 ocorrência de /Type /Page → última página = 0-indexed 0
-    // Assinatura estava na página 2 (última do template 0-indexed) → mapeia para página 0 do novo PDF → +1 = página 1
-    // Rubrica estava na página 0 (não última) → 0 + 1 = página 1
+    const rubrica = (await camposEnviados(camposTemplate)).find((f) => f.name === 'RUBRICA DIVULGANTE');
+    expect(rubrica.role).toBe('DIVULGANTE');
+    expect(rubrica.areas[0].attachment_uuid).toBeUndefined();
+    expect(rubrica.areas[0].page).toBe(1); // 0-indexed → 1-indexed
+  });
+
+  it('template base indisponível: segue só com as assinaturas', async () => {
+    const espiao = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockHttpsSequence([
-      { statusCode: 200, body: { fields: camposTemplate } },
+      { statusCode: 500, body: { error: 'x' } },
       { statusCode: 200, body: respostaSubmissionPdf },
     ]);
-
-    await criarSubmission(dadosBase, fakePdf);
-
-    const calls = https.request.mock.calls;
-    const idx = calls.findIndex(([o]) => o.path === '/submissions/pdf');
-    const { documents } = JSON.parse(https.request.mock.results[idx].value.write.mock.calls[0][0]);
-    const fields = documents[0].fields;
-
-    const rubrica = fields.find(f => f.name === 'RUBRICA DIVULGANTE');
-    expect(rubrica.areas[0].attachment_uuid).toBeUndefined();
-    expect(rubrica.areas[0].page).toBe(1); // 0 + 1
-
-    const assinatura = fields.find(f => f.name === 'ASSINATURA DIVULGANTE');
-    expect(assinatura.areas[0].page).toBe(1); // remapeado para última (0) + 1
+    const r = await criarSubmission(dadosBase, fakePdf);
+    expect(r.submissionId).toBe('sub-1');
+    espiao.mockRestore();
   });
 
   it('lança erro se o DocuSeal retornar 4xx', async () => {
@@ -266,5 +280,22 @@ describe('criarSubmission — com pdfBuffer (POST /submissions/pdf)', () => {
     ]);
 
     await expect(criarSubmission(dadosBase, fakePdf)).rejects.toThrow('DocuSeal 422');
+  });
+});
+
+describe('arquivarSubmission', () => {
+  it('chama DELETE /submissions/:id (reenvio de convite com assinatura em andamento)', async () => {
+    mockHttpsRequest(200, { id: 9, archived_at: 'x' });
+    await arquivarSubmission('9');
+    const [opts] = https.request.mock.calls[0];
+    expect(opts.method).toBe('DELETE');
+    expect(opts.path).toBe('/submissions/9');
+  });
+  it('sem chave de API ou sem id não faz chamada', async () => {
+    delete process.env.DOCUSEAL_API_KEY;
+    await arquivarSubmission('9');
+    process.env.DOCUSEAL_API_KEY = 'fake-key';
+    await arquivarSubmission(null);
+    expect(https.request).not.toHaveBeenCalled();
   });
 });

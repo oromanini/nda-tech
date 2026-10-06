@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   try {
     const buscaParam = `%${busca}%`;
     const where = busca
-      ? 'WHERE razao_social LIKE ? OR email LIKE ? OR cnpj_cpf LIKE ?'
+      ? 'WHERE razao_social LIKE ? OR clientes.email LIKE ? OR cnpj_cpf LIKE ?'
       : '';
     const params = busca ? [buscaParam, buscaParam, buscaParam] : [];
 
@@ -24,9 +24,10 @@ router.get('/', async (req, res) => {
     );
 
     const [rows] = await pool.query(
-      `SELECT id, tipo_pessoa, razao_social, cnpj_cpf, email, created_at
-       FROM clientes ${where}
-       ORDER BY created_at DESC
+      `SELECT clientes.id, tipo_pessoa, razao_social, cnpj_cpf, clientes.email, clientes.created_at,
+              COALESCE(convites.falha_email, 0) AS falha_email
+       FROM clientes LEFT JOIN convites ON convites.id = clientes.convite_id ${where}
+       ORDER BY clientes.created_at DESC
        LIMIT ? OFFSET ?`,
       [...params, porPagina, offset]
     );

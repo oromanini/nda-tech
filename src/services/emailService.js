@@ -97,4 +97,25 @@ async function notificarInterno(dados, pdfBuffer) {
   });
 }
 
-module.exports = { enviarNDA, notificarInterno, enviarLinkAssinatura };
+const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const emailLembretePath = path.join(__dirname, '../../templates/email_lembrete.html');
+
+// Lembrete de convite pendente (A6): só texto, sem botão nem link. O token só existe no e-mail original (o banco guarda
+// apenas o hash) e a raiz do site abriria o formulário legado sem convite (LEGACY_NDA_FORM_ENABLED=true).
+async function enviarLembreteConvite(nome, email, empresa) {
+  const transporter = criarTransporte();
+  let html = fs.readFileSync(emailLembretePath, 'utf-8');
+  html = html.split('{{NOME_SIGNATARIO}}').join(esc(nome));
+  html = html.split('{{MENSAGEM_INTRO}}').join(
+    `Lembrete: o NDA de <strong>${esc(empresa)}</strong> com a <strong>Alluz Tech</strong> ainda aguarda o preenchimento. Use o link do e-mail de convite que enviamos antes; se não o encontrar, peça um novo convite ao seu contato na Alluz.`
+  );
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: 'Lembrete: NDA pendente — Alluz Tech',
+    html,
+  });
+}
+
+module.exports = { enviarNDA, notificarInterno, enviarLinkAssinatura, enviarLembreteConvite };

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.alluz.tech/v1/comandos/nda.convite.criar.schema.json",
+  "title": "Comando nda.convite.criar (Deal → NDA)",
+  "description": "Cria convite de NDA pré-preenchido. Só é chamado se o cliente não tem NDA vigente. O nda-form trava o e-mail no formulário.",
+  "x-metodo": "POST {NDA_URL}/api/integracoes/convites",
+  "$defs": {
+    "requisicao": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "projeto_uuid": {
+          "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/uuid"
+        },
+        "cliente_uuid": {
+          "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/uuid"
+        },
+        "email": {
+          "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/email"
+        },
+        "empresa": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "responsavel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "tipo_projeto": {
+          "$ref": "https://contracts.alluz.tech/v1/comum.schema.json#/$defs/tipo_projeto"
+        }
+      },
+      "required": [
+        "projeto_uuid",
+        "cliente_uuid",
+        "email",
+        "empresa",
+        "responsavel",
+        "tipo_projeto"
+      ]
+    },
+    "resposta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "convite_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "link": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "convite_id",
+        "link"
+      ]
+    }
+  },
+  "$ref": "#/$defs/requisicao"
+}

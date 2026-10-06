@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.alluz.tech/v1/comum.schema.json",
+  "title": "Definições comuns",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "data_hora": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "type": "string",
+      "format": "date"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 255
+    },
+    "dinheiro": {
+      "type": "number",
+      "minimum": 0,
+      "multipleOf": 0.01
+    },
+    "tipo_projeto": {
+      "enum": [
+        "replica",
+        "requisitos"
+      ]
+    },
+    "papel_signatario": {
+      "enum": [
+        "cliente",
+        "alluz",
+        "testemunha1",
+        "testemunha2"
+      ]
+    },
+    "pessoa_cpf": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nome": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "cpf": {
+          "type": "string",
+          "pattern": "^\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 255
+        }
+      },
+      "required": [
+        "nome",
+        "cpf"
+      ]
+    },
+    "dados_juridicos": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tipo_pessoa": {
+          "enum": [
+            "PJ",
+            "PF"
+          ]
+        },
+        "razao_social": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "documento": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "endereco": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "cep": {
+          "type": "string",
+          "pattern": "^\\d{5}-?\\d{3}$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 255
+        },
+        "representante": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "nome": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "cpf": {
+              "type": "string"
+            },
+            "cargo": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          "required": [
+            "nome",
+            "cpf",
+            "cargo"
+          ]
+        },
+        "testemunhas": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/pessoa_cpf",
+            "required": [
+              "nome",
+              "cpf",
+              "email"
+            ]
+          }
+        }
+      },
+      "required": [
+        "tipo_pessoa",
+        "razao_social",
+        "documento",
+        "endereco",
+        "cep",
+        "email",
+        "testemunhas"
+      ],
+      "if": {
+        "properties": {
+          "tipo_pessoa": {
+            "const": "PJ"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "representante"
+        ]
+      }
+    },
+    "progresso_assinatura": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "papel": {
+          "$ref": "#/$defs/papel_signatario"
+        },
+        "nome": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "assinado_em": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "assinaturas_concluidas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "assinaturas_total": {
+          "type": "integer",
+          "const": 4
+        }
+      },
+      "required": [
+        "papel",
+        "nome",
+        "assinado_em",
+        "assinaturas_concluidas",
+        "assinaturas_total"
+      ]
+    }
+  }
+}

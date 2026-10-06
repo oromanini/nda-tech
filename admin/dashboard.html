@@ -137,6 +137,7 @@
       letter-spacing: 0.5px;
     }
     .badge-pj { background: rgba(46,234,255,0.1); color: var(--cyan); border: 1px solid rgba(46,234,255,0.3); }
+    .badge-alerta { background: rgba(231,76,60,0.1); color: #E74C3C; border: 1px solid rgba(231,76,60,0.3); margin-left: 6px; }
     .badge-pf { background: rgba(39,174,96,0.1); color: #27AE60; border: 1px solid rgba(39,174,96,0.3); }
 
     .btn-detail {
@@ -399,7 +400,7 @@
             <td><strong>${escHtml(c.razao_social)}</strong></td>
             <td style="font-family:monospace;font-size:12px">${escHtml(c.cnpj_cpf)}</td>
             <td style="color:var(--muted)">${escHtml(c.email)}</td>
-            <td><span class="badge badge-${c.tipo_pessoa.toLowerCase()}">${c.tipo_pessoa}</span></td>
+            <td><span class="badge badge-${c.tipo_pessoa.toLowerCase()}">${c.tipo_pessoa}</span>${c.falha_email ? '<span class="badge badge-alerta" title="O e-mail com o link de assinatura não chegou ao cliente. Reenvie o NDA pelo Deal.">e-mail não enviado</span>' : ''}</td>
             <td style="color:var(--muted)">${formatDate(c.created_at)}</td>
             <td><button class="btn-detail" data-id="${c.id}">Ver detalhes</button></td>
           </tr>
