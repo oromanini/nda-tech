@@ -92,7 +92,7 @@ jobs:
       # O serviço escala a zero: retentativa da outbox e lembretes são disparados por fora.
       # Pré-requisito (uma vez): API cloudscheduler.googleapis.com habilitada e roles/cloudscheduler.admin
       # para o service account github-actions.
-      - name: Create/update Cloud Scheduler jobs (outbox a cada minuto; lembretes 10:00)
+      - name: Create/update Cloud Scheduler jobs (outbox a cada 5 min; lembretes 10:00)
         env:
           JOBS_TOKEN: ${{ secrets.JOBS_TOKEN }}
           SERVICE_URL: ${{ steps.deploy.outputs.url }}
@@ -116,5 +116,5 @@ jobs:
               gcloud scheduler jobs create http "$JOB" "${COMMON[@]}" --headers="Authorization=Bearer ${JOBS_TOKEN}"
             fi
           }
-          upsert_job nda-form-job-outbox "* * * * *" /api/jobs/outbox
+          upsert_job nda-form-job-outbox "*/5 * * * *" /api/jobs/outbox
           upsert_job nda-form-job-reminders "0 10 * * *" /api/jobs/lembretes
